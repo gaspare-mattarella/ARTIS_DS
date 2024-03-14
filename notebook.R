@@ -17,3 +17,20 @@ general_dt <- general_dt %>%
 general_dt <- general_dt[-1,]
 
 general_dt_panel <- long_panel(general_dt, prefix = "_", begin = 2016, end = 2020, label_location = "end")
+
+
+general_dt_panel <- panel_data(general_dt_panel, id = Firm, wave = wave)
+general_dt_panel$SCR <- as.numeric(general_dt_panel$SCR)
+general_dt_panel$`SCR coverage r` <- as.numeric(general_dt_panel$`SCR coverage r`)
+
+summary(general_dt_panel,  `SCR coverage r`, by.wave = FALSE, by.id = TRUE)
+line_plot(general_dt_panel,SCR)
+line_plot(general_dt_panel,SCR, add.mean = TRUE, alpha = 0.2)
+line_plot(general_dt_panel,SCR, overlay = FALSE, add.mean = TRUE)
+plotmeans(`SCR coverage r` ~ id, main="Heterogeineity across Firms", data=general_dt_panel)
+
+
+
+summary(general_dt_panel,  `SCR coverage r`, by.wave = FALSE, by.id = TRUE)
+
+
