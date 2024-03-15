@@ -172,7 +172,7 @@ top15_gwp <- gwp %>% arrange(desc(numeric.mean)) %>% dplyr::slice_head(n=15)
 knitr::kable(head(top15_gwp))
 ```
 
-```{r tota,warning=FALSE}
+```{r tota, fig.width=10, message=FALSE, warning=FALSE}
 tota <- summary(full_panel,`Total assets `, by.wave = FALSE, by.id = TRUE)
 tota <- tota %>% dplyr::filter(!is.nan(numeric.mean))
 
@@ -209,7 +209,7 @@ full_panel <- full_panel%>% dplyr::filter(!id %in% c(131,216,418,188))
 We've removed from our data all the firms presenting probable mistakes (Firms 131,216,418,188)).\
 In the next step we're going to remove other firms presenting big outliers for SCR coverage ration.
 
-```{r ervf}
+```{r ervf, fig.width=10, message=FALSE, warning=FALSE}
 
 scr_r <- summary(full_panel, `SCR coverage r`, by.wave = FALSE, by.id = TRUE)
 scr_r <- scr_r %>% dplyr::filter(!is.nan(numeric.mean))
@@ -278,7 +278,7 @@ highchart() %>%
 
 ```
 
-#### TASK 2
+### TASK 2
 
 For this second task, we're going to create a new feature from SCR Coverage Ratio by defining in a binary fashion if a firm has reached its coverage goal or not.
 
@@ -448,7 +448,7 @@ We can finally see a graph of feature importance for the Random Forest selected 
 
 This report provides a comprehensive analysis of data for multiple firms. We identified key financial metrics, explored potential relationships between them, and built models to predict a firm's potential financial health. The insights gained from the feature importance analysis provide valuable information about the factors that most influence a firm's financial standing. Further exploration and model development using the techniques discussed can lead to a more robust and generalizable approach to predicting firm financial health.
 
-## TASK 3
+### TASK 3
 
 Microsoft Azure Data Lake Storage (ADLS) serves as a central hub for storing raw and processed versions of our financial data. ADLS is well suited for this task because of its scalability, cost-effectiveness for large data sets, and seamless integration with other Azure services. Security plays a key role, so access control and encryption policies will be defined within ADLS to safeguard sensitive financial information.
 
@@ -459,8 +459,6 @@ Automatic retrieval of data from various sources (databases, APIs) becomes a rea
 Making the data sing:
 
 Once the data is securely stored, Azure Databricks comes into the picture. This powerful service, based on Apache Spark, provides the ideal environment for large-scale data processing tasks. Using Databricks notebooks, we can implement the data cleansing, transformation, and engineering steps described earlier in the report. To optimize the useful
-
-**The Power of Batch Processing:**
 
 Daily batch processing becomes a reality through ADF's scheduling capabilities. These capabilities allow us to trigger data ingestion and processing tasks on a daily basis. Defining dependencies between pipeline activities ensures proper execution order and a smooth flow of data through the pipeline. Monitoring alerts within Azure services keep us informed of the pipeline's execution status, allowing for swift identification and resolution of any potential errors or delays.
 
