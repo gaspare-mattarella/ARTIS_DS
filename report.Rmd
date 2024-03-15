@@ -15,6 +15,8 @@ library(xtsum)
 library(skimr)
 library(highcharter)
 library(ranger)
+library(tidymodels)
+library(vip)
 
 general_dt <- read_csv("general_dt.csv")
 underwriting_dt <- read_csv('underwriting_dt.csv')
@@ -278,9 +280,26 @@ highchart() %>%
 
 #### TASK 2
 
+For this second task, we're going to create a new feature from SCR Coverage Ratio by defining in a binary fashion if a firm has reached its coverage goal or not.
+
+The new variable will be 1 if the ratio is 100% or above, 0 otherwise.
+
+We're going to try two standard algorithms such as Random Forest and Support Vector Machine to try to correctly classify SCR Ratio.
+
+We're going to split the data into training, testing, and validation sets using a 70-10-20 split ratio. Then, we're going to prepare the "recipe" for the models, defining the parameter that need to be tuned and setting few reprocessing steps.
+
+We can see from the above ROC AUC chart that the two models have no big difference in performance. Indeed none of them is actually good, leaving us with future challenges:
+
+We could further investgate
+
+-   **Correlation Analysis:** correlation coefficients between various financial metrics to identify potential relationships. High correlations between features might suggest redundancy, and feature selection techniques could be employed for model improvement.
+
+-   **Alternative Modeling Techniques:** Exploring the potential benefits of using other classification models like Logistic Regression, Gradient Boosting Machines, or Neural Networks depending on the data characteristics and problem complexity.
+
+-   **Feature Engineering Exploration:** Considering alternative feature engineering techniques like feature scaling, binning categorical variables, or creating interaction terms between features to potentially improve model performance.
+
 ```{r rrt}
-library(tidymodels)
-library(vip)
+
 # Fix the random numbers by setting the seed
 # This enables the analysis to be reproducible when random numbers are used
 set.seed(222)
@@ -422,3 +441,29 @@ last_rf_fit %>%
   vip::vip(num_features = 20)
 
 ```
+
+We can finally see a graph of feature importance for the Random Forest selected for deployment.
+
+### Conclusions
+
+This report provides a comprehensive analysis of data for multiple firms. We identified key financial metrics, explored potential relationships between them, and built models to predict a firm's potential financial health. The insights gained from the feature importance analysis provide valuable information about the factors that most influence a firm's financial standing. Further exploration and model development using the techniques discussed can lead to a more robust and generalizable approach to predicting firm financial health.
+
+## TASK 3
+
+Microsoft Azure Data Lake Storage (ADLS) serves as a central hub for storing raw and processed versions of our financial data. ADLS is well suited for this task because of its scalability, cost-effectiveness for large data sets, and seamless integration with other Azure services. Security plays a key role, so access control and encryption policies will be defined within ADLS to safeguard sensitive financial information.
+
+Bringing data in-house:
+
+Automatic retrieval of data from various sources (databases, APIs) becomes a reality with Azure Data Factory (ADF). This serverless service acts as a master, orchestrating the movement of data between the source and the final destination-ADLS. ADF can be scheduled to trigger data retrieval every day, ensuring a constant flow of fresh financial information. When the data arrives, ADF's built-in error handling and validation steps ensure its quality and integrity before it reaches ADLS.
+
+Making the data sing:
+
+Once the data is securely stored, Azure Databricks comes into the picture. This powerful service, based on Apache Spark, provides the ideal environment for large-scale data processing tasks. Using Databricks notebooks, we can implement the data cleansing, transformation, and engineering steps described earlier in the report. To optimize the useful
+
+**The Power of Batch Processing:**
+
+Daily batch processing becomes a reality through ADF's scheduling capabilities. These capabilities allow us to trigger data ingestion and processing tasks on a daily basis. Defining dependencies between pipeline activities ensures proper execution order and a smooth flow of data through the pipeline. Monitoring alerts within Azure services keep us informed of the pipeline's execution status, allowing for swift identification and resolution of any potential errors or delays.
+
+**Conclusion:**
+
+By leveraging Microsoft Azure's cloud services, we can create a robust, scalable, and secure end-to-end data processing and analytics pipeline for the financial analysis report. This approach allows for automated daily batch processing, enabling continuous insights into the financial health of our firms. Remember, the specifics of the pipeline can be customized based on the unique data sources, processing requirements, and security needs of your organization.
