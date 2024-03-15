@@ -1,27 +1,20 @@
 ---
-title: "Untitles"
-author: "Gaspare Mattarella"
-date: "14/03/2024"
+title: "R Notebook"
 output:
-  pdf_document: 
-    toc: yes
-    fig_crop: no
-    number_sections: yes
-    keep_tex: yes
-  html_document: 
-    toc: yes
-    theme: spacelab
-    fig_caption: yes
-    keep_md: yes
+  html_document:
+    df_print: paged
+    code_folding: hide
 ---
 
-
-```{r setup, include=FALSE}
+```{r setup, include=FALSE,echo=FALSE,warning=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(readr)
 library(panelr)
 library(xtsum)
+library(skimr)
+library(highcharter)
+library(ranger)
 
 general_dt <- read_csv("general_dt.csv")
 underwriting_dt <- read_csv('underwriting_dt.csv')
@@ -29,13 +22,13 @@ underwriting_dt <- read_csv('underwriting_dt.csv')
 
 ```
 
-## R Markdown
+## Introduction
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+This report aims to analyze the performance and risk assessment of insurance companies using data analytics techniques in R. We will explore key metrics such as Gross Written Premium (GWP), Total Assets, Solvency Capital Requirement (SCR), and Gross Claims Incurred (GCI). Additionally, predictive models will be built to classify firms based on their SCR Ratio.
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+#### Data Cleaning and Preprocessing
 
-```{r pressure, echo=F, error=FALSE, fig.align='center', warning=FALSE,fig.width=7}
+```{r pressure, echo=F, error=FALSE, fig.align='center', fig.width=7, message=FALSE, warning=FALSE, paged.print=TRUE}
 ### CLEANING general ###
 names(general_dt) <- sub(".{9}$", "", names(general_dt))
 row_as_array <- as.character(unlist(general_dt[1, ]))
@@ -58,34 +51,32 @@ general_dt_panel$id <- as.factor(general_dt_panel$id)
 general_dt_panel$wave <- as.factor(general_dt_panel$wave)
 
 general_dt_panel <- panel_data(general_dt_panel, id = id, wave = wave)
-print(general_dt_panel)
+knitr::kable(head(general_dt_panel))
 ```
 
+The general dataset has been successfully cleaned and reshaped into a panel format, facilitating further analysis. We loaded relevant libraries for data manipulation, visualization, and modeling. Two datasets, general_dt.csv and underwriting_dt.csv, were loaded and cleaned. Data cleaning steps included removing unnecessary characters from column names, reshaping data for analysis, converting columns to numeric format, and handling missing values.
 
-```{r pressure, echo=FALSE}
+Let's start identifying potential outliers:
+
+```{r presssure, echo=FALSE, fig.width=14, message=FALSE, warning=FALSE}
 
 ggplot(stack(as.data.frame(general_dt_panel)), aes(x = ind, y = values)) +
   geom_boxplot()
 ```
 
-We'll take care of SCR Ratio Later
+Visual inspection of box plots reveals potential outliers in the data, which warrant further investigation.
 
-```{r pressure2, echo=FALSE}
+We'll take care of SCR coverage Ratio later. Excluding it, the other variables in the general dataset looks fine.
+
+```{r pressure2, echo=FALSE, fig.width=20, warning=FALSE}
 
 ggplot(stack(as.data.frame(general_dt_panel)[-6]), aes(x = ind, y = values)) +
   geom_boxplot()
 ```
 
+## CLEANING UNDERWRITING DATA
 
-```{r pressure2, echo=FALSE}
-
-ggplot(stack(as.data.frame(general_dt_panel$NWP)), aes(x = ind, y = values)) +
-  geom_boxplot()
-```
-
-
-
-```{r 34}
+```{r 34, message=FALSE, warning=FALSE}
 ### CLEANING underwriting ###
 names(underwriting_dt) <- sub(".{5}$", "", names(underwriting_dt))
 row_as_array <- as.character(unlist(underwriting_dt[1, ]))
@@ -108,45 +99,50 @@ underwriting_dt_panel$wave <- as.factor(underwriting_dt_panel$wave)
 
 underwriting_dt_panel <- panel_data(underwriting_dt_panel, id = id, wave = wave)
 
-print(underwriting_dt_panel)
+knitr::kable(head(underwriting_dt_panel))
 ```
 
+We find what most probably are imputing errors also in the underwriting dataset:
 
-```{r pressu, echo=FALSE}
+```{r preddssu, echo=FALSE, fig.width=20, message=FALSE, warning=FALSE}
 
 ggplot(stack(as.data.frame(underwriting_dt_panel)), aes(x = ind, y = values)) +
   geom_boxplot()
 ```
 
+The Firm with some of these outliers is the number 188:
 
-```{r 4vd}
+```{r 4ddvd,warning=FALSE}
 underwriting_dt_panel %>% 
   filter(if_any(is.numeric, ~ . > 900000))
 ```
 
-Firm 118 seems strange...
-```{r 4vd}
+```{r 4vd, fig.width=20, message=FALSE, warning=FALSE}
 
 boxplot((underwriting_dt_panel%>% dplyr::filter(id == 188)))
-print(underwriting_dt_panel%>% dplyr::filter(id == 188))
+knitr::kable(head(underwriting_dt_panel%>% dplyr::filter(id == 188)))
 ```
 
-```{r sd}
+Another rather strange firm is the 418:
+
+```{r sd,warning=FALSE}
 underwriting_dt_panel %>% 
   filter(if_any(is.numeric, ~ . < -4000000))
 ```
-and Firm 418 as well
 
-```{r 4vd}
+```{r 4vfdsd, fig.width=20, message=FALSE, warning=FALSE}
 
 boxplot((underwriting_dt_panel%>% dplyr::filter(id == 418)))
-print(underwriting_dt_panel%>% dplyr::filter(id == 418))
+knitr::kable(head(underwriting_dt_panel%>% dplyr::filter(id == 418)))
 ```
 
-
-
 ## BASIC CHARTS FOR RELEVANT METRICS
-```{R EF}
+
+Exploratory Data Analysis (EDA) Now that we have a unified dataset, let's conduct further analysis to uncover insights into the insurance companies' performance and risk assessment metrics.
+
+Let's start with the GWP:
+
+```{R EF, fig.width=10, message=FALSE, warning=FALSE}
 
 
 full_panel <- full_join(general_dt_panel,underwriting_dt_panel)
@@ -166,15 +162,15 @@ highchart() %>%
 
 ```
 
+We can come up with the 15 biggest firms for GWP and then bind them with Total Asset to find some of the firms should receive more attention due to their size.
 
-```{r MK}
+```{r MK,warning=FALSE}
 
 top15_gwp <- gwp %>% arrange(desc(numeric.mean)) %>% dplyr::slice_head(n=15)
-print(top15_gwp)
+knitr::kable(head(top15_gwp))
 ```
 
-
-```{r tota}
+```{r tota,warning=FALSE}
 tota <- summary(full_panel,`Total assets `, by.wave = FALSE, by.id = TRUE)
 tota <- tota %>% dplyr::filter(!is.nan(numeric.mean))
 
@@ -190,39 +186,34 @@ highchart() %>%
 
 ```
 
-##We can combine the top 15 Firms for Total Assets with the top 15 GWP and being the 2 sets almost completely overlapping, we obtain 17 of the biggest Firms in the datasets.
-```{r dfs}
+We can combine the top 15 Firms for Total Assets with the top 15 GWP and being the 2 sets almost completely overlapping, we obtain 17 of the biggest Firms in the dataset.
+
+```{r dfs, fig.width=20, message=FALSE, warning=FALSE}
 
 top15_tota <- tota %>% arrange(desc(numeric.mean)) %>% dplyr::slice_head(n=15)
-print(rbind(top15_tota,top15_gwp))
+knitr::kable(head(rbind(top15_tota,top15_gwp)))
 ```
 
-
-```{r sssd}
+```{r sssd, fig.width=20}
 full_panel %>% 
   dplyr::filter(`SCR coverage r` > 400000000)
 ```
 
-```{r 4vddv}
-
-print(full_panel%>% dplyr::filter(id %in% c(131,216)))
-```
-
-
-
-```{r 4vddv}
+```{r 4vddasdfav}
 full_panel <- full_panel%>% dplyr::filter(!id %in% c(131,216,418,188))
-print(full_panel)
+
 ```
 
+We've removed from our data all the firms presenting probable mistakes (Firms 131,216,418,188)).\
+In the next step we're going to remove other firms presenting big outliers for SCR coverage ration.
 
-```{r}
+```{r ervf}
 
 scr_r <- summary(full_panel, `SCR coverage r`, by.wave = FALSE, by.id = TRUE)
 scr_r <- scr_r %>% dplyr::filter(!is.nan(numeric.mean))
 
 scr_r_outliers <- scr_r %>% dplyr::filter(numeric.mean > 200)
-print(scr_r_outliers)
+knitr::kable(head(scr_r_outliers))
 # removing the outliers
 full_panel <- full_panel%>% dplyr::filter(!id %in% scr_r_outliers$id)
 scr_r <- summary(full_panel, `SCR coverage r`, by.wave = FALSE, by.id = TRUE)
@@ -241,14 +232,20 @@ highchart() %>%
 
 ```
 
+The Solvency Capital Requirement (SCR) Coverage Ratio is a key financial metric used in the insurance industry to assess an insurance company's ability to meet its regulatory capital requirements. The SCR represents the amount of capital that an insurer is required to hold in order to ensure that it has sufficient funds to cover its insurance liabilities with a high level of confidence over a specified time horizon, typically one year. Therefore the supervisors might be interested in the worst performing ones:
+
 ```{r fesd}
-print(scr_r %>% arrange(numeric.mean) %>% dplyr::slice_head(n=35))
+knitr::kable(head(scr_r %>% arrange(numeric.mean) %>% dplyr::slice_head(n=35)))
 
 ```
 
+#### GCI - **Gross claims incurred** 
 
+##### a large cost to an insurer. Monitoring how these change over time for a firm is vital. 
 
-```{r dsg}
+We're now going to calculate the CAGR to assess which firms has changed the most in respect to its past years:
+
+```{r dsg, fig.width=10, message=FALSE, warning=FALSE}
 # Let's calculate the CAGR for GCI
 
 df <- full_panel %>%
@@ -279,8 +276,9 @@ highchart() %>%
 
 ```
 
-#### TASK 2 ####
-```{r}
+#### TASK 2
+
+```{r rrt}
 library(tidymodels)
 library(vip)
 # Fix the random numbers by setting the seed
@@ -352,7 +350,7 @@ rf_res <-
   tune_grid(
     resamples = vfold_cv(val_set),
             grid = 25,
-            control = control_grid(save_pred = TRUE,verbose = T),
+            control = control_grid(save_pred = T,verbose = F),
             metrics = metric_set(roc_auc))
 
 svm_res <-
@@ -360,14 +358,14 @@ svm_res <-
   tune_grid(
     resamples = vfold_cv(val_set),
     grid = 25,
-    control = control_grid(save_pred = TRUE,verbose = T),
+    control = control_grid(save_pred = T,verbose = F),
     metrics = metric_set(roc_auc))
 
 
 
 ```
 
-```{r dfs}
+```{r dfsllko}
 
 rf_best <-
   rf_res %>%
@@ -398,6 +396,7 @@ bind_rows(rf_auc, svm_auc) %>%
   scale_color_viridis_d(option = "plasma", end = .6)
 
 ```
+
 ```{r final}
 
 # the last model
